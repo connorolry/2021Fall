@@ -1,5 +1,5 @@
 <template>
-  <div class="buttons" v-if="!name">
+  <div class="buttons" v-if="!Session.user">
       <a class="button is-primary">
        <strong>Sign up</strong>
      </a>
@@ -15,19 +15,17 @@
 <script>
 import Session from "../services/session"
 export default {
-    data: ()=>({ 
-        name: null,
-        Session
-    }),
+    data (){
+        return ({
+            Session
+        })
+    },
     method: {
         login() {
-            this.name = 'Bob';
+            this.Session.Login();
         }
     },
     computed:{
-        name(){
-            return this.Session.user.FirstName + ' ' + this.Session.user.Lastname
-        }
     }
 }
 </script>

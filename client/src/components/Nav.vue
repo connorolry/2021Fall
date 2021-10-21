@@ -14,10 +14,14 @@
           
             <div id="navbarBasicExample" class="navbar-menu" :class="{ 'is-active': navBarIsActive}">
               <div class="navbar-start">
-                <a class="navbar-item">
+                <router-link class="navbar-item" href="/">
                   Home
-                </a>
+                </router-link>
           
+                <a class="navbar-item" href="/feed">
+                  Feed
+                </a>
+
                 <a class="navbar-item">
                   Documentation
                 </a>
