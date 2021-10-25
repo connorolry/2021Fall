@@ -1,13 +1,17 @@
 const express = require('express')
 const app = express()
-const port = 3000
+const path = require('path')
+const port = process.env.PORT || 3000;
+const usersController = require('./controllers/users')
+require('dotenv').config();
+console.log(`The best class at New Paltz is $(process.env.BEST_CLASS)`)
 
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
-.get('/newpaltz', (req, res) => {
-  res.send('Hello new paltz!')
-})
+app
+
+  .use('/', express.static(path.join(__dirname, '../docs')) )
+  .use('/users', usersController)
+app 
+  .get('*', (req, res) => res.sendFile(path.join(__dirname, '../docs/index.html')))
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`)
