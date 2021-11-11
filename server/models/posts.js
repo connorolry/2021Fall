@@ -1,7 +1,11 @@
 /* B"H
-
 */
-import { GetByHandle } from "./users";
+const Users = require( "./users");
+const { ObjectId } = require('bson');
+const { client } = require('./mongo');
+
+const collection = client.db(process.env.MONGO_DB).collection('posts');
+module.exports.collection = collection;
 
 const list = [
     { 
@@ -46,39 +50,77 @@ const list = [
     },
 ];
 
-const listWithOwner = ()=> list.map(x => ({ 
-    ...x, 
-    user: GetByHandle(x.user_handle) 
-}) );
+const addOwnerPipeline = [
+    {"$lookup" : {
+        from: "users",
+        localField: 'user_handle',
+        foreignField: 'handle',
+        as: 'owner',
+    }},
+    {$unwind: "$owner"},
+    { $project: { "owner.password": 0}}
+];
 
-export function GetAll() {
-    return listWithOwner();
+module.exports.GetAll = function GetAll() {
+    return collection.aggregate(addOwnerPipeline).toArray();
 }
 
-export function GetWall(handle) {
-    return listWithOwner().filter(post=> post.user_handle == handle);
+module.exports.GetWall = function GetWall(handle) {
+    return collection.aggregate(addOwnerPipeline).match({ user_handle: handle }).toArray();
 }
 
-export function GetFeed(handle) { return listWithOwner()
-    .filter(post=> GetByHandle(handle).following.some(f=> f.handle == post.user_handle && f.isApproved) );     }
+// TODO: convert to MongoDB
+module.exports.GetFeed = function GetFeed(handle) {
+    const query = Users.collection.aggregate([
+        {$match: { handle }},
+        {"$lookup" : {
+            from: "posts",
+            localField: 'following.handle',
+            foreignField: 'user_handle',
+            as: 'posts'
+        }},
+        {$unwind: '$posts'},
+        {$replaceRoot: { newRoot: "$posts" } },
+    ].concat(addOwnerPipeline));
+    return query.toArray();
+    //return listWithOwner()
+    //.match(post=> GetByHandle(handle).following.some(f=> f.handle == post.user_handle && f.isApproved) );
+}
 
 
-export function Get(post_id) { return list[post_id]; }
-export function Add(post) {
+module.exports.Get = function Get(post_id) { return collection.findOne({_id: new ObjectId(post_id) }); }
+
+module.exports.Add = async function Add(post) {
     if(!post.user_handle){
         throw {code: 422, msg: "Post must have an Owner"}
     }
-     list.push(post);
-     return { ...post };
+    post.time = Date();
+    
+    const response = await collection.insertOne(post);
+    
+    post.id = response.insertedId;
+
+    return { ...post };
 }
-export function Update(post_id, post) {
-    const oldObj = list[post_id];
-    const newObj = { ...oldObj, ...post }
-    list[post_id] = newObj ;
-    return newObj;
+module.exports.Update = async function Update(post_id, post) {
+    const results = await collection.findOneAndUpdate(
+        {_id: new ObjectId(post_id) }, 
+        { $set: post },
+        { returnDocument: 'after'}
+    );
+
+    return results.value;
 }
-export function Delete(post_id) {
-    const post = list[post_id];
-    list.splice(post_id, 1);
-    return post;
+module.exports.Delete = async function Delete(post_id) {
+    const results = await collection.findOneAndDelete({_id: new ObjectId(post_id) })
+
+    return results.value;
+} 
+
+module.exports.Search = q => collection.find({ caption: new RegExp(q,"i") }).toArray();
+
+module.exports.Seed = async ()=>{
+    for (const x of list) {
+        await this.Add(x)
+    }
 }
