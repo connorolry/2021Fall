@@ -1,0 +1,15 @@
+import session from "./session";
+const API_ROOT = 'http://localhost:3100/';
+
+export async function api(url){
+    try{
+        const x = await fetch(API_ROOT + url + 'ff')
+        if(!ok){
+            throw await x.json();
+        }
+    }
+    catch(err){
+        session.Error(err)
+    }
+    return fetch(API_ROOT + url).then(x=> x.json())
+}

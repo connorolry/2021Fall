@@ -13,6 +13,10 @@ const port = process.env.PORT || 3000;
 app
     .use('/', express.static(path.join(__dirname, '../docs')) )
 
+    .use( (req, res, next) =>{
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    })
+
     .use(express.json())
     .use('/users', usersController )
     .use('/posts', postsController)
